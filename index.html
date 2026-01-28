@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HealthCare+ Pro</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+*{box-sizing:border-box;font-family:"Segoe UI",sans-serif;margin:0;padding:0;}
+body{background:linear-gradient(135deg,#1e3c72,#2a5298);color:#fff;}
+.navbar{display:flex;justify-content:space-between;align-items:center;padding:15px 25px;background:rgba(0,0,0,0.3);backdrop-filter:blur(5px);flex-wrap:wrap;}
+.navbar a{color:white;margin-left:18px;text-decoration:none;font-weight:500;cursor:pointer;transition:color 0.3s;}
+.navbar a:hover{color:#00e6e6;}
+section{display:none;padding:20px;max-width:1000px;margin:auto;}
+section.active{display:block;background:rgba(255,255,255,0.05);border-radius:15px;padding:20px;margin-top:20px;}
+.center{text-align:center;}
+input, select, button{padding:10px;border-radius:8px;border:none;margin-top:8px;width:100%;max-width:300px;}
+button{background:#00e6e6;color:#000;font-weight:600;cursor:pointer;transition:transform 0.2s;}
+button:hover{transform:scale(1.05);}
+#map{height:450px;border-radius:10px;margin-top:15px;}
+.cards{display:flex;flex-wrap:wrap;gap:16px;margin-top:15px;}
+.card{background:rgba(255,255,255,0.1);border-radius:12px;padding:14px;box-shadow:0 4px 8px rgba(0,0,0,0.3);width:260px;transition:transform 0.2s;}
+.card:hover{transform:translateY(-5px);}
+.rating{color:gold;}
+.saved-btn{background:#ffb703;color:#000;padding:5px 10px;border-radius:5px;margin-top:5px;cursor:pointer;display:inline-block;}
+.saved-btn:hover{background:#fb8500;}
+@media(max-width:768px){.cards{flex-direction:column;align-items:center;} input,button{max-width:100%;}}
+label{display:block;margin-top:10px;}
+</style>
+</head>
+<body>
+
+<div class="navbar">
+  <div><strong>HealthCare+</strong></div>
+  <div>
+    <a onclick="showTab('mapTab')">Map</a>
+    <a onclick="showTab('hospitals')">Hospital List</a>
+    <a onclick="showTab('symptoms')">Symptoms</a>
+    <a onclick="showTab('appointments')">Appointments</a>
+  </div>
+</div>
+
+<!-- MAP -->
+<section id="mapTab" class="active">
+  <h2 class="center">Hospitals Map</h2>
+  <p class="center">Fetching hospitals near your location…</p>
+  <label>Radius (miles):</label>
+  <input type="range" id="radius" min="25" max="250" value="25" oninput="radiusOutput.innerText=this.value">
+  <span id="radiusOutput">25</span> miles
+  <label>Filter by Specialty:</label>
+  <select id="filterSpecialty" onchange="filterMap()">
+    <option value="">All</option>
+    <option value="Cardiologist">Cardiologist</option>
+    <option value="Pulmonologist">Pulmonologist</option>
+    <option value="Internal Medicine">Internal Medicine</option>
+    <option value="Neurologist">Neurologist</option>
+    <option value="Orthopedic">Orthopedic</option>
+    <option value="Dermatologist">Dermatologist</option>
+    <option value="Gastroenterologist">Gastroenterologist</option>
+    <option value="General Practitioner">General Practitioner</option>
+  </select>
+  <div id="map"></div>
+</section>
+
+<!-- HOSPITAL LIST -->
+<section id="hospitals">
+  <h2>Nearby Hospitals</h2>
+  <label>Search by City/ZIP:</label>
+  <input id="searchLocation" placeholder="e.g. Tampa or 33602">
+  <button onclick="searchHospitals()">Search</button>
+  <div class="cards" id="hospitalCards"></div>
+</section>
+
+<!-- SYMPTOM TAB -->
+<section id="symptoms">
+  <h2>Describe Your Symptom</h2>
+  <input id="symptomInput" placeholder="e.g. chest pain, headache">
+  <label>Severity:</label>
+  <input type="range" id="severity" min="1" max="10" value="5">
+  <span id="severityValue">5</span>
+  <button onclick="getRecommendation()">Recommend Doctor</button>
+  <h3 id="recommendation"></h3>
+</section>
+
+<!-- APPOINTMENTS TAB -->
+<section id="appointments">
+  <h2>Book an Appointment</h2>
+  <label>Select Hospital:</label>
+  <select id="appointmentHospital"></select>
+  <label>Select Date:</label>
+  <input type="date" id="appointmentDate">
+  <label>Select Time:</label>
+  <input type="time" id="appointmentTime">
+  <button onclick="saveAppointment()">Save Appointment</button>
+  <h3>Saved Appointments</h3>
+  <div class="cards" id="savedAppointments"></div>
+</section>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ---------- TAB SWITCH ----------
+function showTab(tab){
+  document.querySelectorAll("section").forEach(s=>s.classList.remove("active"));
+  document.getElementById(tab).classList.add("active");
+}
+
+// ---------- GLOBAL ----------
+let hospitalsData=[],map,markers=[];
+const symptomMap={
+  chest:"Cardiologist",heart:"Cardiologist",
+  breathing:"Pulmonologist",asthma:"Pulmonologist",
+  fever:"Internal Medicine",infection:"Internal Medicine",
+  headache:"Neurologist",seizure:"Neurologist",
+  bone:"Orthopedic",fracture:"Orthopedic",
+  skin:"Dermatologist",rash:"Dermatologist",
+  stomach:"Gastroenterologist",abdominal:"Gastroenterologist"
+};
+
+// ---------- SYMPTOM ----------
+document.getElementById("severity").addEventListener("input",function(){
+  document.getElementById("severityValue").innerText=this.value;
+});
+function getRecommendation(){
+  const val=document.getElementById("symptomInput").value.toLowerCase();
+  let rec="General Practitioner";
+  for(let key in symptomMap){if(val.includes(key)){rec=symptomMap[key];break;}}
+  document.getElementById("recommendation").innerText=`Recommended Doctor: ${rec}`;
+  populateAppointmentHospitals(rec);
+}
+
+// ---------- FETCH HOSPITALS ----------
+async function fetchHospitals(lat=27.9506,lon=-82.4572,radius=25){
+  const radMeters=radius*1609.34;
+  const query=`[out:json];(node["amenity"="hospital"](around:${radMeters},${lat},${lon});way["amenity"="hospital"](around:${radMeters},${lat},${lon});relation["amenity"="hospital"](around:${radMeters},${lat},${lon}););out center;`;
+  const res=await fetch("https://overpass-api.de/api/interpreter",{method:"POST",body:query});
+  const data=await res.json();
+  hospitalsData=data.elements.map(el=>{
+    const latH=el.lat||el.center?.lat;
+    const lonH=el.lon||el.center?.lon;
+    return {name:el.tags?.name||"Hospital",lat:latH,lon:lonH,specialty:randomSpecialty(),rating:Math.floor(Math.random()*5)+1};
+  });
+  populateMap();populateList();updateSavedHospitalOptions();
+}
+function randomSpecialty(){
+  const values=["Cardiologist","Pulmonologist","Internal Medicine","Neurologist","Orthopedic","Dermatologist","Gastroenterologist","General Practitioner"];
+  return values[Math.floor(Math.random()*values.length)];
+}
+
+// ---------- MAP ----------
+function populateMap(){
+  if(map){map.remove();markers=[];}
+  map=L.map("map").setView([27.9506,-82.4572],11);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
+  hospitalsData.forEach(h=>{
+    const marker=L.marker([h.lat,h.lon]).addTo(map).bindPopup(`<b>${h.name}</b><br>${h.specialty}<br>${"★".repeat(h.rating)}<br><span class="saved-btn" onclick="saveHospital('${h.name}')">Save</span>`);
+    markers.push({marker,specialty:h.specialty});
+  });
+}
+function filterMap(){
+  const val=document.getElementById("filterSpecialty").value;
+  markers.forEach(m=>{ if(val && m.specialty!==val){ m.marker.remove(); } else{ m.marker.addTo(map); } });
+}
+
+// ---------- LIST ----------
+function populateList(){
+  const cards=  document.getElementById("hospitalCards");
+  cards.innerHTML="";
+  hospitalsData.forEach(h=>{
+    cards.innerHTML+=`<div class="card">
+      <h4>${h.name}</h4>
+      <p>Specialty: ${h.specialty}</p>
+      <p>Rating: ${"★".repeat(h.rating)}</p>
+      <span class="saved-btn" onclick="saveHospital('${h.name}')">Save Hospital</span>
+    </div>`;
+  });
+}
+
+// ---------- SAVE HOSPITALS ----------
+function saveHospital(name){
+  let saved=JSON.parse(localStorage.getItem("savedHospitals")||"[]");
+  if(!saved.includes(name)){saved.push(name);}
+  localStorage.setItem("savedHospitals",JSON.stringify(saved));
+  updateSavedHospitalOptions();
+  alert("Hospital Saved!");
+}
+function updateSavedHospitalOptions(){
+  const sel=document.getElementById("appointmentHospital");
+  const saved=JSON.parse(localStorage.getItem("savedHospitals")||"[]");
+  sel.innerHTML="<option value=''>Select Hospital</option>";
+  saved.forEach(h=>{const opt=document.createElement("option");opt.value=h;opt.textContent=h;sel.appendChild(opt);});
+}
+
+// ---------- APPOINTMENTS ----------
+function saveAppointment(){
+  const hosp=document.getElementById("appointmentHospital").value;
+  const date=document.getElementById("appointmentDate").value;
+  const time=document.getElementById("appointmentTime").value;
+  if(!hosp||!date||!time){alert("Fill all fields!"); return;}
+  let saved=JSON.parse(localStorage.getItem("appointments")||"[]");
+  saved.push({hospital:hosp,date,time});
+  localStorage.setItem("appointments",JSON.stringify(saved));
+  loadAppointments();
+}
+function loadAppointments(){
+  const div=document.getElementById("savedAppointments");
+  div.innerHTML="";
+  const saved=JSON.parse(localStorage.getItem("appointments")||"[]");
+  saved.forEach(a=>{
+    div.innerHTML+=`<div class="card"><h4>${a.hospital}</h4><p>Date: ${a.date}</p><p>Time: ${a.time}</p></div>`;
+  });
+}                              
+loadAppointments();
+
+// ---------- SEARCH ----------
+function searchHospitals(){
+  const input=document.getElementById("searchLocation").value.toLowerCase();
+  const filtered=hospitalsData.filter(h=>h.name.toLowerCase().includes(input));
+  const cards=document.getElementById("hospitalCards");cards.innerHTML="";
+  filtered.forEach(h=>{
+    cards.innerHTML+=`<div class="card"><h4>${h.name}</h4><p>Specialty: ${h.specialty}</p><p>Rating: ${"★".repeat(h.rating)}</p><span class="saved-btn" onclick="saveHospital('${h.name}')">Save Hospital</span></div>`;
+  });
+}
+
+// ---------- INIT LOCATION ----------
+function initLocation(){
+  const rad=document.getElementById("radius").value;
+  if(!navigator.geolocation){fetchHospitals(undefined,undefined,rad);return;}
+  navigator.geolocation.getCurrentPosition(pos=>fetchHospitals(pos.coords.latitude,pos.coords.longitude,rad),()=>fetchHospitals(undefined,undefined,rad));
+}
+initLocation();
+document.getElementById("radius").addEventListener("change",initLocation);
+
+</script>
+</body>
+</html>
+
