@@ -43,7 +43,10 @@ label{display:block;margin-top:10px;}
 <!-- MAP -->
 <section id="mapTab" class="active">
   <h2 class="center">Hospitals Map</h2>
-  <p class="center">Fetching hospitals near your location…</p>
+  <label>Search by ZIP Code or City:</label>
+  <input type="text" id="locationSearch" placeholder="e.g. 33602 or Chicago" style="max-width:220px;" onkeydown="if(event.key==='Enter')searchByLocation()">
+  <button onclick="searchByLocation()" style="max-width:120px;">Search</button>
+  <p id="locationStatus" style="font-size:0.85rem;margin-top:6px;opacity:0.8;">Enter a ZIP code or city to find hospitals near you.</p>
   <label>Radius (miles):</label>
   <input type="range" id="radius" min="25" max="250" value="25" oninput="radiusOutput.innerText=this.value">
   <span id="radiusOutput">25</span> miles
@@ -65,8 +68,8 @@ label{display:block;margin-top:10px;}
 <!-- HOSPITAL LIST -->
 <section id="hospitals">
   <h2>Nearby Hospitals</h2>
-  <label>Search by City/ZIP:</label>
-  <input id="searchLocation" placeholder="e.g. Tampa or 33602">
+  <label>Search by Name:</label>
+  <input id="searchLocation" placeholder="e.g. Tampa General">
   <button onclick="searchHospitals()">Search</button>
   <div class="cards" id="hospitalCards"></div>
 </section>
@@ -98,14 +101,13 @@ label{display:block;margin-top:10px;}
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-// ---------- TAB SWITCH ----------
 function showTab(tab){
   document.querySelectorAll("section").forEach(s=>s.classList.remove("active"));
   document.getElementById(tab).classList.add("active");
 }
 
-// ---------- GLOBAL ----------
 let hospitalsData=[],map,markers=[];
+
 const symptomMap={
   chest:"Cardiologist",heart:"Cardiologist",
   breathing:"Pulmonologist",asthma:"Pulmonologist",
@@ -116,10 +118,10 @@ const symptomMap={
   stomach:"Gastroenterologist",abdominal:"Gastroenterologist"
 };
 
-// ---------- SYMPTOM ----------
 document.getElementById("severity").addEventListener("input",function(){
   document.getElementById("severityValue").innerText=this.value;
 });
+
 function getRecommendation(){
   const val=document.getElementById("symptomInput").value.toLowerCase();
   let rec="General Practitioner";
@@ -128,54 +130,78 @@ function getRecommendation(){
   populateAppointmentHospitals(rec);
 }
 
-// ---------- FETCH HOSPITALS ----------
-async function fetchHospitals(lat=27.9506,lon=-82.4572,radius=25){
+async function geocodeLocation(query){
+  const url=`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&countrycodes=us&format=json&limit=1`;
+  const res=await fetch(url,{headers:{"Accept-Language":"en"}});
+  const data=await res.json();
+  if(!data.length) throw new Error("Location not found");
+  return {lat:parseFloat(data[0].lat),lon:parseFloat(data[0].lon)};
+}
+
+async function searchByLocation(){
+  const query=document.getElementById("locationSearch").value.trim();
+  if(!query){alert("Please enter a ZIP code or city.");return;}
+  const radius=document.getElementById("radius").value;
+  document.getElementById("locationStatus").innerText="Searching…";
+  try{
+    const loc=await geocodeLocation(query);
+    await fetchHospitals(loc.lat,loc.lon,radius);
+    document.getElementById("locationStatus").innerText=`Showing hospitals near "${query}"`;
+  }catch(e){
+    document.getElementById("locationStatus").innerText="Location not found. Try a different ZIP or city name.";
+  }
+}
+
+async function fetchHospitals(lat,lon,radius){
   const radMeters=radius*1609.34;
-  const query=`[out:json];(node["amenity"="hospital"](around:${radMeters},${lat},${lon});way["amenity"="hospital"](around:${radMeters},${lat},${lon});relation["amenity"="hospital"](around:${radMeters},${lat},${lon}););out center;`;
+  const query=`[out:json][timeout:25];(node["amenity"="hospital"](around:${radMeters},${lat},${lon});way["amenity"="hospital"](around:${radMeters},${lat},${lon});relation["amenity"="hospital"](around:${radMeters},${lat},${lon}););out center;`;
   const res=await fetch("https://overpass-api.de/api/interpreter",{method:"POST",body:query});
   const data=await res.json();
-  hospitalsData=data.elements.map(el=>{
-    const latH=el.lat||el.center?.lat;
-    const lonH=el.lon||el.center?.lon;
-    return {name:el.tags?.name||"Hospital",lat:latH,lon:lonH,specialty:randomSpecialty(),rating:Math.floor(Math.random()*5)+1};
-  });
-  populateMap();populateList();updateSavedHospitalOptions();
+  hospitalsData=data.elements
+    .filter(el=>(el.lat||el.center?.lat)&&(el.lon||el.center?.lon))
+    .map(el=>({
+      name:el.tags?.name||"Hospital",
+      lat:el.lat||el.center.lat,
+      lon:el.lon||el.center.lon,
+      specialty:randomSpecialty(),
+      rating:Math.floor(Math.random()*5)+1
+    }));
+  populateMap(lat,lon);populateList();updateSavedHospitalOptions();
 }
+
 function randomSpecialty(){
   const values=["Cardiologist","Pulmonologist","Internal Medicine","Neurologist","Orthopedic","Dermatologist","Gastroenterologist","General Practitioner"];
   return values[Math.floor(Math.random()*values.length)];
 }
 
-// ---------- MAP ----------
-function populateMap(){
+function populateMap(lat,lon){
   if(map){map.remove();markers=[];}
-  map=L.map("map").setView([27.9506,-82.4572],11);
+  map=L.map("map").setView([lat,lon],11);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
   hospitalsData.forEach(h=>{
-    const marker=L.marker([h.lat,h.lon]).addTo(map).bindPopup(`<b>${h.name}</b><br>${h.specialty}<br>${"★".repeat(h.rating)}<br><span class="saved-btn" onclick="saveHospital('${h.name}')">Save</span>`);
+    const marker=L.marker([h.lat,h.lon]).addTo(map).bindPopup(`<b>${h.name}</b><br>${h.specialty}<br>${"★".repeat(h.rating)}<br><span class="saved-btn" onclick="saveHospital('${h.name.replace(/'/g,"\\'")}')">Save</span>`);
     markers.push({marker,specialty:h.specialty});
   });
 }
+
 function filterMap(){
   const val=document.getElementById("filterSpecialty").value;
-  markers.forEach(m=>{ if(val && m.specialty!==val){ m.marker.remove(); } else{ m.marker.addTo(map); } });
+  markers.forEach(m=>{if(val&&m.specialty!==val){m.marker.remove();}else{m.marker.addTo(map);}});
 }
 
-// ---------- LIST ----------
 function populateList(){
-  const cards=  document.getElementById("hospitalCards");
+  const cards=document.getElementById("hospitalCards");
   cards.innerHTML="";
   hospitalsData.forEach(h=>{
     cards.innerHTML+=`<div class="card">
       <h4>${h.name}</h4>
       <p>Specialty: ${h.specialty}</p>
       <p>Rating: ${"★".repeat(h.rating)}</p>
-      <span class="saved-btn" onclick="saveHospital('${h.name}')">Save Hospital</span>
+      <span class="saved-btn" onclick="saveHospital('${h.name.replace(/'/g,"\\'")}')">Save Hospital</span>
     </div>`;
   });
 }
 
-// ---------- SAVE HOSPITALS ----------
 function saveHospital(name){
   let saved=JSON.parse(localStorage.getItem("savedHospitals")||"[]");
   if(!saved.includes(name)){saved.push(name);}
@@ -183,6 +209,7 @@ function saveHospital(name){
   updateSavedHospitalOptions();
   alert("Hospital Saved!");
 }
+
 function updateSavedHospitalOptions(){
   const sel=document.getElementById("appointmentHospital");
   const saved=JSON.parse(localStorage.getItem("savedHospitals")||"[]");
@@ -190,17 +217,25 @@ function updateSavedHospitalOptions(){
   saved.forEach(h=>{const opt=document.createElement("option");opt.value=h;opt.textContent=h;sel.appendChild(opt);});
 }
 
-// ---------- APPOINTMENTS ----------
+function populateAppointmentHospitals(specialty){
+  const matching=hospitalsData.filter(h=>h.specialty===specialty);
+  const existing=JSON.parse(localStorage.getItem("savedHospitals")||"[]");
+  matching.forEach(h=>{if(!existing.includes(h.name))existing.push(h.name);});
+  localStorage.setItem("savedHospitals",JSON.stringify(existing));
+  updateSavedHospitalOptions();
+}
+
 function saveAppointment(){
   const hosp=document.getElementById("appointmentHospital").value;
   const date=document.getElementById("appointmentDate").value;
   const time=document.getElementById("appointmentTime").value;
-  if(!hosp||!date||!time){alert("Fill all fields!"); return;}
+  if(!hosp||!date||!time){alert("Fill all fields!");return;}
   let saved=JSON.parse(localStorage.getItem("appointments")||"[]");
   saved.push({hospital:hosp,date,time});
   localStorage.setItem("appointments",JSON.stringify(saved));
   loadAppointments();
 }
+
 function loadAppointments(){
   const div=document.getElementById("savedAppointments");
   div.innerHTML="";
@@ -208,29 +243,27 @@ function loadAppointments(){
   saved.forEach(a=>{
     div.innerHTML+=`<div class="card"><h4>${a.hospital}</h4><p>Date: ${a.date}</p><p>Time: ${a.time}</p></div>`;
   });
-}                              
+}
 loadAppointments();
 
-// ---------- SEARCH ----------
 function searchHospitals(){
   const input=document.getElementById("searchLocation").value.toLowerCase();
   const filtered=hospitalsData.filter(h=>h.name.toLowerCase().includes(input));
   const cards=document.getElementById("hospitalCards");cards.innerHTML="";
   filtered.forEach(h=>{
-    cards.innerHTML+=`<div class="card"><h4>${h.name}</h4><p>Specialty: ${h.specialty}</p><p>Rating: ${"★".repeat(h.rating)}</p><span class="saved-btn" onclick="saveHospital('${h.name}')">Save Hospital</span></div>`;
+    cards.innerHTML+=`<div class="card"><h4>${h.name}</h4><p>Specialty: ${h.specialty}</p><p>Rating: ${"★".repeat(h.rating)}</p><span class="saved-btn" onclick="saveHospital('${h.name.replace(/'/g,"\\'")}')">Save Hospital</span></div>`;
   });
 }
 
-// ---------- INIT LOCATION ----------
-function initLocation(){
-  const rad=document.getElementById("radius").value;
-  if(!navigator.geolocation){fetchHospitals(undefined,undefined,rad);return;}
-  navigator.geolocation.getCurrentPosition(pos=>fetchHospitals(pos.coords.latitude,pos.coords.longitude,rad),()=>fetchHospitals(undefined,undefined,rad));
-}
-initLocation();
-document.getElementById("radius").addEventListener("change",initLocation);
+map=L.map("map").setView([39.5,-98.35],4);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
 
+document.getElementById("radius").addEventListener("change",function(){
+  const query=document.getElementById("locationSearch").value.trim();
+  if(query) searchByLocation();
+});
+
+updateSavedHospitalOptions();
 </script>
 </body>
 </html>
-
