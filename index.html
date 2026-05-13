@@ -4,265 +4,778 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HealthCare+ Pro</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-*{box-sizing:border-box;font-family:"Segoe UI",sans-serif;margin:0;padding:0;}
-body{background:linear-gradient(135deg,#1e3c72,#2a5298);color:#fff;}
-.navbar{display:flex;justify-content:space-between;align-items:center;padding:15px 25px;background:rgba(0,0,0,0.3);backdrop-filter:blur(5px);flex-wrap:wrap;}
-.navbar a{color:white;margin-left:18px;text-decoration:none;font-weight:500;cursor:pointer;transition:color 0.3s;}
-.navbar a:hover{color:#00e6e6;}
-section{display:none;padding:20px;max-width:1000px;margin:auto;}
-section.active{display:block;background:rgba(255,255,255,0.05);border-radius:15px;padding:20px;margin-top:20px;}
-.center{text-align:center;}
-input, select, button{padding:10px;border-radius:8px;border:none;margin-top:8px;width:100%;max-width:300px;}
-button{background:#00e6e6;color:#000;font-weight:600;cursor:pointer;transition:transform 0.2s;}
-button:hover{transform:scale(1.05);}
-#map{height:450px;border-radius:10px;margin-top:15px;}
-.cards{display:flex;flex-wrap:wrap;gap:16px;margin-top:15px;}
-.card{background:rgba(255,255,255,0.1);border-radius:12px;padding:14px;box-shadow:0 4px 8px rgba(0,0,0,0.3);width:260px;transition:transform 0.2s;}
-.card:hover{transform:translateY(-5px);}
-.rating{color:gold;}
-.saved-btn{background:#ffb703;color:#000;padding:5px 10px;border-radius:5px;margin-top:5px;cursor:pointer;display:inline-block;}
-.saved-btn:hover{background:#fb8500;}
-@media(max-width:768px){.cards{flex-direction:column;align-items:center;} input,button{max-width:100%;}}
-label{display:block;margin-top:10px;}
+:root {
+  --navy: #0d1b3e;
+  --navy-mid: #1a2f5e;
+  --teal: #00c9b1;
+  --teal-dim: rgba(0,201,177,0.15);
+  --gold: #f5c842;
+  --rose: #ff6b8a;
+  --white: #f0f4ff;
+  --glass: rgba(255,255,255,0.06);
+  --glass-border: rgba(255,255,255,0.12);
+  --text-muted: rgba(240,244,255,0.55);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--navy);
+  color: var(--white);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Background mesh */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 80% 10%, rgba(0,201,177,0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 60% at 10% 80%, rgba(26,47,94,0.8) 0%, transparent 70%),
+    radial-gradient(ellipse 70% 40% at 50% 50%, rgba(13,27,62,0.5) 0%, transparent 80%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─── NAVBAR ─────────────────────────────── */
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 36px;
+  background: rgba(13,27,62,0.85);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.logo {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.5rem;
+  letter-spacing: -0.5px;
+  color: var(--white);
+}
+
+.logo span { color: var(--teal); }
+
+.nav-links { display: flex; gap: 6px; }
+
+.nav-links a {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.875rem;
+  padding: 8px 16px;
+  border-radius: 40px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.25s;
+  letter-spacing: 0.02em;
+}
+
+.nav-links a:hover, .nav-links a.active {
+  color: var(--white);
+  background: var(--glass);
+  border-color: var(--glass-border);
+}
+
+.nav-links a.active { color: var(--teal); }
+
+/* ─── SECTIONS ────────────────────────────── */
+.main-wrap { position: relative; z-index: 1; max-width: 980px; margin: 0 auto; padding: 36px 24px 80px; }
+
+section { display: none; animation: fadeUp 0.4s ease; }
+section.active { display: block; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── PAGE HEADERS ────────────────────────── */
+.page-header { margin-bottom: 32px; }
+.page-header h2 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 2.2rem;
+  line-height: 1.15;
+  margin-bottom: 8px;
+}
+.page-header p { color: var(--text-muted); font-size: 0.95rem; }
+
+/* ─── CARDS ───────────────────────────────── */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap: 18px; margin-top: 18px; }
+
+.card {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 20px;
+  transition: transform 0.25s, box-shadow 0.25s;
+}
+.card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.3); }
+.card h4 { font-size: 1rem; margin-bottom: 8px; }
+.card p { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 4px; }
+.rating { color: var(--gold); letter-spacing: 1px; }
+
+/* ─── FORM ELEMENTS ───────────────────────── */
+.form-group { margin-bottom: 18px; }
+label { display: block; font-size: 0.8rem; font-weight: 500; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+
+input[type="text"], input[type="date"], input[type="time"], input[type="number"], select, textarea {
+  width: 100%;
+  max-width: 380px;
+  padding: 11px 16px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  color: var(--white);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--teal);
+  background: rgba(0,201,177,0.07);
+}
+select option { background: var(--navy-mid); }
+
+input[type="range"] {
+  -webkit-appearance: none;
+  width: 100%;
+  max-width: 380px;
+  height: 4px;
+  background: var(--glass-border);
+  border-radius: 4px;
+  outline: none;
+  border: none;
+  padding: 0;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--teal);
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(0,201,177,0.5);
+}
+
+.range-row { display: flex; align-items: center; gap: 12px; }
+.range-val {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--teal);
+  min-width: 36px;
+}
+
+/* ─── BUTTONS ─────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 24px;
+  background: var(--teal);
+  color: var(--navy);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border: none;
+  border-radius: 40px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  letter-spacing: 0.03em;
+  margin-top: 8px;
+}
+.btn:hover { transform: scale(1.04); box-shadow: 0 6px 20px rgba(0,201,177,0.35); }
+
+.btn-gold { background: var(--gold); }
+.btn-gold:hover { box-shadow: 0 6px 20px rgba(245,200,66,0.35); }
+
+.btn-sm {
+  padding: 7px 14px;
+  font-size: 0.78rem;
+  margin-top: 10px;
+}
+
+/* ─── HOSPITAL SEARCH ROW ─────────────────── */
+.search-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 24px; }
+.search-row input { margin-top: 0; max-width: 260px; }
+
+/* ─── SPECIALTY BADGE ─────────────────────── */
+.badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: var(--teal-dim);
+  color: var(--teal);
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+/* ─── SYMPTOMS ────────────────────────────── */
+.rec-box {
+  margin-top: 24px;
+  padding: 20px 24px;
+  background: var(--teal-dim);
+  border: 1px solid rgba(0,201,177,0.3);
+  border-radius: 14px;
+  display: none;
+}
+.rec-box h3 { font-family: 'DM Serif Display', serif; font-size: 1.4rem; margin-bottom: 4px; }
+.rec-box p { color: var(--text-muted); font-size: 0.88rem; }
+
+/* ─── APPOINTMENTS ────────────────────────── */
+.appt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; max-width: 680px; }
+@media(max-width:600px){ .appt-grid { grid-template-columns: 1fr; } }
+
+.appt-card .tag {
+  font-size: 0.72rem;
+  color: var(--gold);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+/* ─── INSURANCE ESTIMATOR ─────────────────── */
+.est-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start; }
+@media(max-width:680px){ .est-layout { grid-template-columns: 1fr; } }
+
+.est-form { max-width: 100%; }
+.est-form input, .est-form select { max-width: 100%; }
+
+.est-result {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 28px;
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.est-result::before {
+  content: '';
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 160px; height: 160px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,201,177,0.15) 0%, transparent 70%);
+}
+
+.est-placeholder {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+.est-placeholder .icon { font-size: 2.5rem; margin-bottom: 12px; }
+
+.est-output { display: none; }
+.est-output h3 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.3rem;
+  margin-bottom: 20px;
+  color: var(--teal);
+}
+
+.cost-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--glass-border);
+  font-size: 0.875rem;
+}
+.cost-row:last-of-type { border-bottom: none; }
+.cost-row .label { color: var(--text-muted); }
+.cost-row .value { font-weight: 600; }
+.cost-row .value.teal { color: var(--teal); }
+.cost-row .value.gold { color: var(--gold); }
+.cost-row .value.rose { color: var(--rose); }
+
+.est-total {
+  margin-top: 18px;
+  padding: 14px 18px;
+  background: rgba(0,201,177,0.12);
+  border: 1px solid rgba(0,201,177,0.25);
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.est-total .tot-label { font-weight: 600; font-size: 0.95rem; }
+.est-total .tot-value { font-family: 'DM Serif Display', serif; font-size: 1.6rem; color: var(--teal); }
+
+.disclaimer {
+  margin-top: 14px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* ─── DIVIDER ─────────────────────────────── */
+.divider { border: none; border-top: 1px solid var(--glass-border); margin: 28px 0; }
+
+/* ─── PLAN CHIPS ──────────────────────────── */
+.plan-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.chip {
+  padding: 7px 16px;
+  border-radius: 30px;
+  border: 1px solid var(--glass-border);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--glass);
+  color: var(--text-muted);
+}
+.chip.sel { background: var(--teal-dim); border-color: var(--teal); color: var(--teal); font-weight: 600; }
+
+@media(max-width:480px){ .nav-links a { padding: 7px 10px; font-size: 0.78rem; } }
 </style>
 </head>
 <body>
 
 <div class="navbar">
-  <div><strong>HealthCare+</strong></div>
-  <div>
-    <a onclick="showTab('mapTab')">Map</a>
-    <a onclick="showTab('hospitals')">Hospital List</a>
-    <a onclick="showTab('symptoms')">Symptoms</a>
-    <a onclick="showTab('appointments')">Appointments</a>
-  </div>
+  <div class="logo">Health<span>Care+</span></div>
+  <nav class="nav-links">
+    <a onclick="showTab('hospitals')" id="tab-hospitals" class="active">Hospitals</a>
+    <a onclick="showTab('symptoms')" id="tab-symptoms">Symptoms</a>
+    <a onclick="showTab('appointments')" id="tab-appointments">Appointments</a>
+    <a onclick="showTab('insurance')" id="tab-insurance">Insurance</a>
+  </nav>
 </div>
 
-<!-- MAP -->
-<section id="mapTab" class="active">
-  <h2 class="center">Hospitals Map</h2>
-  <label>Search by ZIP Code or City:</label>
-  <input type="text" id="locationSearch" placeholder="e.g. Chicago" style="max-width:220px;" onkeydown="if(event.key==='Enter')searchByLocation()">
-  <button onclick="searchByLocation()" style="max-width:120px;">Search</button>
-  <p id="locationStatus" style="font-size:0.85rem;margin-top:6px;opacity:0.8;">Enter a ZIP code or city to find hospitals near you.</p>
-  <label>Radius (miles):</label>
-  <input type="range" id="radius" min="25" max="250" value="25" oninput="radiusOutput.innerText=this.value">
-  <span id="radiusOutput">25</span> miles
-  <label>Filter by Specialty:</label>
-  <select id="filterSpecialty" onchange="filterMap()">
-    <option value="">All</option>
-    <option value="Cardiologist">Cardiologist</option>
-    <option value="Pulmonologist">Pulmonologist</option>
-    <option value="Internal Medicine">Internal Medicine</option>
-    <option value="Neurologist">Neurologist</option>
-    <option value="Orthopedic">Orthopedic</option>
-    <option value="Dermatologist">Dermatologist</option>
-    <option value="Gastroenterologist">Gastroenterologist</option>
-    <option value="General Practitioner">General Practitioner</option>
-  </select>
-  <div id="map"></div>
-</section>
+<div class="main-wrap">
 
-<!-- HOSPITAL LIST -->
-<section id="hospitals">
-  <h2>Nearby Hospitals</h2>
-  <label>Search by Name:</label>
-  <input id="searchLocation" placeholder="e.g. Tampa General">
-  <button onclick="searchHospitals()">Search</button>
-  <div class="cards" id="hospitalCards"></div>
-</section>
+  <!-- ── HOSPITAL LIST ─────────────────────── -->
+  <section id="hospitals" class="active">
+    <div class="page-header">
+      <h2>Find a Hospital</h2>
+      <p>Search by name or specialty to find facilities near you.</p>
+    </div>
 
-<!-- SYMPTOM TAB -->
-<section id="symptoms">
-  <h2>Describe Your Symptom</h2>
-  <input id="symptomInput" placeholder="e.g. chest pain, headache">
-  <label>Severity:</label>
-  <input type="range" id="severity" min="1" max="10" value="5">
-  <span id="severityValue">5</span>
-  <button onclick="getRecommendation()">Recommend Doctor</button>
-  <h3 id="recommendation"></h3>
-</section>
+    <div class="search-row">
+      <div class="form-group" style="margin:0;">
+        <label>Search by Name</label>
+        <input type="text" id="searchLocation" placeholder="e.g. Tampa General" oninput="searchHospitals()">
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label>Filter Specialty</label>
+        <select id="filterSpecialty" onchange="searchHospitals()">
+          <option value="">All Specialties</option>
+          <option>Cardiologist</option>
+          <option>Pulmonologist</option>
+          <option>Internal Medicine</option>
+          <option>Neurologist</option>
+          <option>Orthopedic</option>
+          <option>Dermatologist</option>
+          <option>Gastroenterologist</option>
+          <option>General Practitioner</option>
+        </select>
+      </div>
+    </div>
 
-<!-- APPOINTMENTS TAB -->
-<section id="appointments">
-  <h2>Book an Appointment</h2>
-  <label>Select Hospital:</label>
-  <select id="appointmentHospital"></select>
-  <label>Select Date:</label>
-  <input type="date" id="appointmentDate">
-  <label>Select Time:</label>
-  <input type="time" id="appointmentTime">
-  <button onclick="saveAppointment()">Save Appointment</button>
-  <h3>Saved Appointments</h3>
-  <div class="cards" id="savedAppointments"></div>
-</section>
+    <div class="cards" id="hospitalCards"></div>
+  </section>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- ── SYMPTOMS ──────────────────────────── -->
+  <section id="symptoms">
+    <div class="page-header">
+      <h2>Symptom Checker</h2>
+      <p>Describe what you're experiencing and get a specialist recommendation.</p>
+    </div>
+
+    <div class="form-group">
+      <label>Describe Your Symptom</label>
+      <input type="text" id="symptomInput" placeholder="e.g. chest pain, headache, rash…" style="max-width:420px;">
+    </div>
+    <div class="form-group">
+      <label>Severity — <span id="severityLabel">Moderate (5)</span></label>
+      <div class="range-row">
+        <input type="range" id="severity" min="1" max="10" value="5" oninput="updateSeverity(this.value)" style="max-width:320px;">
+        <span class="range-val" id="severityNum">5</span>
+      </div>
+    </div>
+    <button class="btn" onclick="getRecommendation()">Get Recommendation</button>
+
+    <div class="rec-box" id="recBox">
+      <p style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--teal);font-weight:600;margin-bottom:6px;">Recommended Specialist</p>
+      <h3 id="recommendation"></h3>
+      <p id="recNote" style="margin-top:6px;"></p>
+    </div>
+  </section>
+
+  <!-- ── APPOINTMENTS ──────────────────────── -->
+  <section id="appointments">
+    <div class="page-header">
+      <h2>Book an Appointment</h2>
+      <p>Schedule a visit with a saved hospital.</p>
+    </div>
+
+    <div class="appt-grid">
+      <div class="form-group">
+        <label>Select Hospital</label>
+        <select id="appointmentHospital" style="max-width:100%;"></select>
+      </div>
+      <div class="form-group">
+        <label>Select Date</label>
+        <input type="date" id="appointmentDate" style="max-width:100%;">
+      </div>
+      <div class="form-group">
+        <label>Select Time</label>
+        <input type="time" id="appointmentTime" style="max-width:100%;">
+      </div>
+      <div class="form-group" style="display:flex;align-items:flex-end;">
+        <button class="btn btn-gold" onclick="saveAppointment()">Save Appointment</button>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <h3 style="font-family:'DM Serif Display',serif;font-size:1.3rem;margin-bottom:16px;">Upcoming Appointments</h3>
+    <div class="cards" id="savedAppointments"></div>
+  </section>
+
+  <!-- ── INSURANCE ESTIMATOR ───────────────── -->
+  <section id="insurance">
+    <div class="page-header">
+      <h2>Insurance Cost Estimator</h2>
+      <p>Estimate your out-of-pocket costs based on your plan and procedure.</p>
+    </div>
+
+    <div class="est-layout">
+      <div class="est-form">
+
+        <div class="form-group">
+          <label>Plan Type</label>
+          <div class="plan-chips" id="planChips">
+            <div class="chip sel" onclick="selectChip(this,'plan')">HMO</div>
+            <div class="chip" onclick="selectChip(this,'plan')">PPO</div>
+            <div class="chip" onclick="selectChip(this,'plan')">EPO</div>
+            <div class="chip" onclick="selectChip(this,'plan')">HDHP</div>
+            <div class="chip" onclick="selectChip(this,'plan')">Medicare</div>
+            <div class="chip" onclick="selectChip(this,'plan')">Medicaid</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Procedure / Service</label>
+          <select id="procedure" style="max-width:100%;">
+            <option value="">Select a procedure…</option>
+            <optgroup label="Diagnostics">
+              <option value="1200">MRI Scan</option>
+              <option value="400">CT Scan</option>
+              <option value="150">X-Ray</option>
+              <option value="250">Blood Panel (Full)</option>
+              <option value="90">Urinalysis</option>
+            </optgroup>
+            <optgroup label="Visits">
+              <option value="200">Primary Care Visit</option>
+              <option value="350">Specialist Consultation</option>
+              <option value="800">Emergency Room Visit</option>
+              <option value="120">Urgent Care Visit</option>
+              <option value="100">Mental Health Therapy Session</option>
+            </optgroup>
+            <optgroup label="Surgery">
+              <option value="15000">Appendectomy</option>
+              <option value="30000">Knee Replacement</option>
+              <option value="8000">Laparoscopic Surgery</option>
+              <option value="5000">Cataract Surgery</option>
+            </optgroup>
+            <optgroup label="Preventive">
+              <option value="300">Annual Physical</option>
+              <option value="1500">Colonoscopy</option>
+              <option value="200">Mammogram</option>
+              <option value="60">Flu Shot / Vaccine</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Annual Deductible ($)</label>
+          <input type="number" id="deductible" placeholder="e.g. 1500" min="0" style="max-width:100%;">
+        </div>
+
+        <div class="form-group">
+          <label>Deductible Already Met ($)</label>
+          <input type="number" id="deductibleMet" placeholder="e.g. 500" min="0" style="max-width:100%;">
+        </div>
+
+        <div class="form-group">
+          <label>Coinsurance After Deductible</label>
+          <div class="plan-chips" id="coinChips">
+            <div class="chip sel" onclick="selectChip(this,'coin')">10%</div>
+            <div class="chip" onclick="selectChip(this,'coin')">20%</div>
+            <div class="chip" onclick="selectChip(this,'coin')">30%</div>
+            <div class="chip" onclick="selectChip(this,'coin')">40%</div>
+            <div class="chip" onclick="selectChip(this,'coin')">50%</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Out-of-Pocket Maximum ($)</label>
+          <input type="number" id="oopMax" placeholder="e.g. 6000" min="0" style="max-width:100%;">
+        </div>
+
+        <button class="btn" onclick="estimateCost()">Calculate My Cost</button>
+      </div>
+
+      <div class="est-result">
+        <div class="est-placeholder" id="estPlaceholder">
+          <div class="icon">🩺</div>
+          <p>Fill in your plan details and select a procedure to see your estimated out-of-pocket cost.</p>
+        </div>
+        <div class="est-output" id="estOutput">
+          <h3>Your Estimate</h3>
+          <div class="cost-row">
+            <span class="label">Procedure List Price</span>
+            <span class="value" id="rProcedure">—</span>
+          </div>
+          <div class="cost-row">
+            <span class="label">Remaining Deductible</span>
+            <span class="value rose" id="rDeductible">—</span>
+          </div>
+          <div class="cost-row">
+            <span class="label">Coinsurance Owed</span>
+            <span class="value gold" id="rCoinsurance">—</span>
+          </div>
+          <div class="cost-row">
+            <span class="label">Insurance Covers</span>
+            <span class="value teal" id="rInsurance">—</span>
+          </div>
+          <div class="est-total">
+            <span class="tot-label">Your Total Out-of-Pocket</span>
+            <span class="tot-value" id="rTotal">—</span>
+          </div>
+          <p class="disclaimer">⚠ This is an estimate only. Actual costs may vary based on your specific plan, provider network, and negotiated rates. Always verify with your insurer before a procedure.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
 <script>
-function showTab(tab){
-  document.querySelectorAll("section").forEach(s=>s.classList.remove("active"));
-  document.getElementById(tab).classList.add("active");
-}
+// ── DATA ──────────────────────────────────────────
+const HOSPITALS = [
+  {name:"Tampa General Hospital",specialty:"Cardiologist",rating:5,address:"1 Tampa General Cir, Tampa, FL"},
+  {name:"AdventHealth Tampa",specialty:"Internal Medicine",rating:4,address:"3100 E Fletcher Ave, Tampa, FL"},
+  {name:"St. Joseph's Hospital",specialty:"Neurologist",rating:5,address:"3001 W Dr MLK Jr Blvd, Tampa, FL"},
+  {name:"Moffitt Cancer Center",specialty:"General Practitioner",rating:5,address:"12902 USF Magnolia Dr, Tampa, FL"},
+  {name:"BayCare St. Anthony's",specialty:"Pulmonologist",rating:4,address:"1200 7th Ave N, St. Petersburg, FL"},
+  {name:"HCA Florida Brandon",specialty:"Orthopedic",rating:4,address:"119 Oakfield Dr, Brandon, FL"},
+  {name:"Sarasota Memorial",specialty:"Gastroenterologist",rating:4,address:"1700 S Tamiami Trail, Sarasota, FL"},
+  {name:"Bayfront Health St. Pete",specialty:"Dermatologist",rating:3,address:"701 6th St S, St. Petersburg, FL"},
+  {name:"Lakeland Regional Health",specialty:"Cardiologist",rating:4,address:"1324 Lakeland Hills Blvd, Lakeland, FL"},
+  {name:"Manatee Memorial Hospital",specialty:"Internal Medicine",rating:3,address:"206 2nd St E, Bradenton, FL"},
+  {name:"Morton Plant Hospital",specialty:"Neurologist",rating:5,address:"300 Pinellas St, Clearwater, FL"},
+  {name:"Suncoast Dermatology",specialty:"Dermatologist",rating:4,address:"4350 Bee Ridge Rd, Sarasota, FL"},
+];
 
-let hospitalsData=[],map,markers=[];
-
-const symptomMap={
-  chest:"Cardiologist",heart:"Cardiologist",
-  breathing:"Pulmonologist",asthma:"Pulmonologist",
-  fever:"Internal Medicine",infection:"Internal Medicine",
-  headache:"Neurologist",seizure:"Neurologist",
-  bone:"Orthopedic",fracture:"Orthopedic",
-  stomach:"Gastroenterologist",abdominal:"Gastroenterologist"
+const SYMPTOM_MAP = {
+  chest:"Cardiologist",heart:"Cardiologist",palpitation:"Cardiologist",
+  breathing:"Pulmonologist",asthma:"Pulmonologist",cough:"Pulmonologist",
+  fever:"Internal Medicine",infection:"Internal Medicine",fatigue:"Internal Medicine",
+  headache:"Neurologist",seizure:"Neurologist",migraine:"Neurologist",dizziness:"Neurologist",
+  bone:"Orthopedic",fracture:"Orthopedic",joint:"Orthopedic",knee:"Orthopedic",back:"Orthopedic",
+  skin:"Dermatologist",rash:"Dermatologist",acne:"Dermatologist",
+  stomach:"Gastroenterologist",abdominal:"Gastroenterologist",nausea:"Gastroenterologist",bloat:"Gastroenterologist",
 };
 
-document.getElementById("severity").addEventListener("input",function(){
-  document.getElementById("severityValue").innerText=this.value;
-});
-
-function getRecommendation(){
-  const val=document.getElementById("symptomInput").value.toLowerCase();
-  let rec="General Practitioner";
-  for(let key in symptomMap){if(val.includes(key)){rec=symptomMap[key];break;}}
-  document.getElementById("recommendation").innerText=`Recommended Doctor: ${rec}`;
-  populateAppointmentHospitals(rec);
+function showTab(id) {
+  document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.getElementById('tab-' + id).classList.add('active');
 }
 
-async function geocodeLocation(query){
-  const url=`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&countrycodes=us&format=json&limit=1`;
-  const res=await fetch(url,{headers:{"Accept-Language":"en"}});
-  const data=await res.json();
-  if(!data.length) throw new Error("Location not found");
-  return {lat:parseFloat(data[0].lat),lon:parseFloat(data[0].lon)};
-}
-
-async function searchByLocation(){
-  const query=document.getElementById("locationSearch").value.trim();
-  if(!query){alert("Please enter a ZIP code or city.");return;}
-  const radius=document.getElementById("radius").value;
-  document.getElementById("locationStatus").innerText="Searching…";
-  try{
-    const loc=await geocodeLocation(query);
-    await fetchHospitals(loc.lat,loc.lon,radius);
-    document.getElementById("locationStatus").innerText=`Showing hospitals near "${query}"`;
-  }catch(e){
-    document.getElementById("locationStatus").innerText="Location not found. Try a different ZIP or city name.";
-  }
-}
-
-async function fetchHospitals(lat,lon,radius){
-  const radMeters=radius*1609.34;
-  const query=`[out:json][timeout:25];(node["amenity"="hospital"](around:${radMeters},${lat},${lon});way["amenity"="hospital"](around:${radMeters},${lat},${lon});relation["amenity"="hospital"](around:${radMeters},${lat},${lon}););out center;`;
-  const res=await fetch("https://overpass-api.de/api/interpreter",{method:"POST",body:query});
-  const data=await res.json();
-  hospitalsData=data.elements
-    .filter(el=>(el.lat||el.center?.lat)&&(el.lon||el.center?.lon))
-    .map(el=>({
-      name:el.tags?.name||"Hospital",
-      lat:el.lat||el.center.lat,
-      lon:el.lon||el.center.lon,
-      specialty:randomSpecialty(),
-      rating:Math.floor(Math.random()*5)+1
-    }));
-  populateMap(lat,lon);populateList();updateSavedHospitalOptions();
-}
-
-function randomSpecialty(){
-  const values=["Cardiologist","Pulmonologist","Internal Medicine","Neurologist","Orthopedic","Dermatologist","Gastroenterologist","General Practitioner"];
-  return values[Math.floor(Math.random()*values.length)];
-}
-
-function populateMap(lat,lon){
-  if(map){map.remove();markers=[];}
-  map=L.map("map").setView([lat,lon],11);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
-  hospitalsData.forEach(h=>{
-    const marker=L.marker([h.lat,h.lon]).addTo(map).bindPopup(`<b>${h.name}</b><br>${h.specialty}<br>${"★".repeat(h.rating)}<br><span class="saved-btn" onclick="saveHospital('${h.name.replace(/'/g,"\\'")}')">Save</span>`);
-    markers.push({marker,specialty:h.specialty});
-  });
-}
-
-function filterMap(){
-  const val=document.getElementById("filterSpecialty").value;
-  markers.forEach(m=>{if(val&&m.specialty!==val){m.marker.remove();}else{m.marker.addTo(map);}});
-}
-
-function populateList(){
-  const cards=document.getElementById("hospitalCards");
-  cards.innerHTML="";
-  hospitalsData.forEach(h=>{
-    cards.innerHTML+=`<div class="card">
+function renderHospitals(list) {
+  const c = document.getElementById('hospitalCards');
+  if (!list.length) { c.innerHTML = '<p style="color:var(--text-muted)">No hospitals match your search.</p>'; return; }
+  c.innerHTML = list.map(h => `
+    <div class="card">
+      <div class="badge">${h.specialty}</div>
       <h4>${h.name}</h4>
-      <p>Specialty: ${h.specialty}</p>
-      <p>Rating: ${"★".repeat(h.rating)}</p>
-      <span class="saved-btn" onclick="saveHospital('${h.name.replace(/'/g,"\\'")}')">Save Hospital</span>
-    </div>`;
-  });
+      <p>${h.address}</p>
+      <p class="rating">${'★'.repeat(h.rating)}${'☆'.repeat(5-h.rating)}</p>
+      <button class="btn btn-sm btn-gold" onclick="saveHospital('${h.name.replace(/'/g,"\\'")}')">Save Hospital</button>
+    </div>`).join('');
 }
 
-function saveHospital(name){
-  let saved=JSON.parse(localStorage.getItem("savedHospitals")||"[]");
-  if(!saved.includes(name)){saved.push(name);}
-  localStorage.setItem("savedHospitals",JSON.stringify(saved));
-  updateSavedHospitalOptions();
-  alert("Hospital Saved!");
+function searchHospitals() {
+  const q = document.getElementById('searchLocation').value.toLowerCase();
+  const sp = document.getElementById('filterSpecialty').value;
+  renderHospitals(HOSPITALS.filter(h =>
+    (!q || h.name.toLowerCase().includes(q)) &&
+    (!sp || h.specialty === sp)
+  ));
 }
 
-function updateSavedHospitalOptions(){
-  const sel=document.getElementById("appointmentHospital");
-  const saved=JSON.parse(localStorage.getItem("savedHospitals")||"[]");
-  sel.innerHTML="<option value=''>Select Hospital</option>";
-  saved.forEach(h=>{const opt=document.createElement("option");opt.value=h;opt.textContent=h;sel.appendChild(opt);});
+renderHospitals(HOSPITALS);
+function saveHospital(name) {
+  let saved = getSaved('savedHospitals');
+  if (!saved.includes(name)) saved.push(name);
+  setSaved('savedHospitals', saved);
+  updateHospitalDropdown();
+  showToast('Hospital saved!');
 }
 
-function populateAppointmentHospitals(specialty){
-  const matching=hospitalsData.filter(h=>h.specialty===specialty);
-  const existing=JSON.parse(localStorage.getItem("savedHospitals")||"[]");
-  matching.forEach(h=>{if(!existing.includes(h.name))existing.push(h.name);});
-  localStorage.setItem("savedHospitals",JSON.stringify(existing));
-  updateSavedHospitalOptions();
+function updateHospitalDropdown() {
+  const sel = document.getElementById('appointmentHospital');
+  const saved = getSaved('savedHospitals');
+  sel.innerHTML = '<option value="">Select a saved hospital…</option>' +
+    saved.map(h => `<option value="${h}">${h}</option>`).join('');
+}
+function updateSeverity(v) {
+  document.getElementById('severityNum').textContent = v;
+  const labels = ['','Very Mild','Mild','Mild','Moderate','Moderate','Moderate','Significant','Significant','Severe','Critical'];
+  document.getElementById('severityLabel').textContent = `${labels[v]} (${v})`;
 }
 
-function saveAppointment(){
-  const hosp=document.getElementById("appointmentHospital").value;
-  const date=document.getElementById("appointmentDate").value;
-  const time=document.getElementById("appointmentTime").value;
-  if(!hosp||!date||!time){alert("Fill all fields!");return;}
-  let saved=JSON.parse(localStorage.getItem("appointments")||"[]");
-  saved.push({hospital:hosp,date,time});
-  localStorage.setItem("appointments",JSON.stringify(saved));
+function getRecommendation() {
+  const val = document.getElementById('symptomInput').value.toLowerCase();
+  if (!val.trim()) { showToast('Please describe a symptom first.', true); return; }
+  let rec = 'General Practitioner';
+  for (let key in SYMPTOM_MAP) { if (val.includes(key)) { rec = SYMPTOM_MAP[key]; break; } }
+  const severity = document.getElementById('severity').value;
+  document.getElementById('recommendation').textContent = rec;
+  const note = severity >= 8
+    ? '⚠ High severity detected. Consider visiting an emergency room immediately.'
+    : `Based on your symptoms, we recommend scheduling with a ${rec}.`;
+  document.getElementById('recNote').textContent = note;
+  document.getElementById('recBox').style.display = 'block';
+  const matching = HOSPITALS.filter(h => h.specialty === rec);
+  const saved = getSaved('savedHospitals');
+  matching.forEach(h => { if (!saved.includes(h.name)) saved.push(h.name); });
+  setSaved('savedHospitals', saved);
+  updateHospitalDropdown();
+}
+
+// ── APPOINTMENTS ──────────────────────────────────
+function saveAppointment() {
+  const hosp = document.getElementById('appointmentHospital').value;
+  const date = document.getElementById('appointmentDate').value;
+  const time = document.getElementById('appointmentTime').value;
+  if (!hosp || !date || !time) { showToast('Please fill all fields.', true); return; }
+  let saved = getSaved('appointments');
+  saved.push({hospital: hosp, date, time});
+  setSaved('appointments', saved);
+  loadAppointments();
+  showToast('Appointment booked!');
+}
+
+function loadAppointments() {
+  const div = document.getElementById('savedAppointments');
+  const saved = getSaved('appointments');
+  if (!saved.length) { div.innerHTML = '<p style="color:var(--text-muted)">No appointments yet.</p>'; return; }
+  div.innerHTML = saved.map((a,i) => `
+    <div class="card appt-card">
+      <div class="tag">Appointment</div>
+      <h4>${a.hospital}</h4>
+      <p>📅 ${formatDate(a.date)}</p>
+      <p>⏰ ${formatTime(a.time)}</p>
+      <button class="btn btn-sm" style="background:var(--rose);margin-top:10px;" onclick="cancelAppt(${i})">Cancel</button>
+    </div>`).join('');
+}
+
+function cancelAppt(i) {
+  let saved = getSaved('appointments');
+  saved.splice(i, 1);
+  setSaved('appointments', saved);
   loadAppointments();
 }
+let selectedPlan = 'HMO';
+let selectedCoin = 10;
 
-function loadAppointments(){
-  const div=document.getElementById("savedAppointments");
-  div.innerHTML="";
-  const saved=JSON.parse(localStorage.getItem("appointments")||"[]");
-  saved.forEach(a=>{
-    div.innerHTML+=`<div class="card"><h4>${a.hospital}</h4><p>Date: ${a.date}</p><p>Time: ${a.time}</p></div>`;
-  });
+function selectChip(el, group) {
+  const parent = el.closest('.plan-chips');
+  parent.querySelectorAll('.chip').forEach(c => c.classList.remove('sel'));
+  el.classList.add('sel');
+  if (group === 'plan') selectedPlan = el.textContent.trim();
+  if (group === 'coin') selectedCoin = parseInt(el.textContent);
 }
+
+const PLAN_MODIFIERS = { HMO:0.70, PPO:0.80, EPO:0.72, HDHP:0.60, Medicare:0.55, Medicaid:0.40 };
+
+function estimateCost() {
+  const procedureVal = parseFloat(document.getElementById('procedure').value);
+  const deductible   = parseFloat(document.getElementById('deductible').value) || 0;
+  const metSoFar     = parseFloat(document.getElementById('deductibleMet').value) || 0;
+  const oopMax       = parseFloat(document.getElementById('oopMax').value) || Infinity;
+
+  if (!procedureVal) { showToast('Please select a procedure.', true); return; }
+
+  const modifier = PLAN_MODIFIERS[selectedPlan] || 0.70;
+  // Negotiated price after plan discounts
+  const negotiated = procedureVal * modifier;
+
+  // Remaining deductible
+  const remDeductible = Math.max(0, deductible - metSoFar);
+  const deductibleOwed = Math.min(remDeductible, negotiated);
+  const afterDeductible = Math.max(0, negotiated - deductibleOwed);
+  const coinsuranceOwed = afterDeductible * (selectedCoin / 100);
+
+  const rawOOP = deductibleOwed + coinsuranceOwed;
+  const cappedOOP = Math.min(rawOOP, oopMax - metSoFar);
+  const insurancePays = negotiated - cappedOOP;
+
+  document.getElementById('rProcedure').textContent    = fmt(negotiated);
+  document.getElementById('rDeductible').textContent   = fmt(deductibleOwed);
+  document.getElementById('rCoinsurance').textContent  = fmt(coinsuranceOwed);
+  document.getElementById('rInsurance').textContent    = fmt(Math.max(0, insurancePays));
+  document.getElementById('rTotal').textContent        = fmt(Math.max(0, cappedOOP));
+
+  document.getElementById('estPlaceholder').style.display = 'none';
+  document.getElementById('estOutput').style.display = 'block';
+}
+
+// ── UTILS ─────────────────────────────────────────
+function getSaved(key) { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; } }
+function setSaved(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
+function fmt(n) { return '$' + Math.round(n).toLocaleString(); }
+function formatDate(d) { if (!d) return d; const [y,m,day] = d.split('-'); return `${m}/${day}/${y}`; }
+function formatTime(t) {
+  if (!t) return t;
+  const [h, m] = t.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  return `${h % 12 || 12}:${String(m).padStart(2,'0')} ${ampm}`;
+}
+
+// Toast
+function showToast(msg, err = false) {
+  const old = document.getElementById('toast');
+  if (old) old.remove();
+  const t = document.createElement('div');
+  t.id = 'toast';
+  t.textContent = msg;
+  Object.assign(t.style, {
+    position: 'fixed', bottom: '28px', left: '50%', transform: 'translateX(-50%) translateY(20px)',
+    background: err ? 'var(--rose)' : 'var(--teal)',
+    color: err ? '#fff' : 'var(--navy)',
+    padding: '10px 22px', borderRadius: '40px', fontWeight: '600', fontSize: '0.875rem',
+    zIndex: 9999, opacity: 0, transition: 'all 0.3s', whiteSpace: 'nowrap',
+    boxShadow: '0 6px 20px rgba(0,0,0,0.3)'
+  });
+  document.body.appendChild(t);
+  requestAnimationFrame(() => { t.style.opacity = 1; t.style.transform = 'translateX(-50%) translateY(0)'; });
+  setTimeout(() => { t.style.opacity = 0; setTimeout(() => t.remove(), 300); }, 2800);
+}
+
+
+updateHospitalDropdown();
 loadAppointments();
-
-function searchHospitals(){
-  const input=document.getElementById("searchLocation").value.toLowerCase();
-  const filtered=hospitalsData.filter(h=>h.name.toLowerCase().includes(input));
-  const cards=document.getElementById("hospitalCards");cards.innerHTML="";
-  filtered.forEach(h=>{
-    cards.innerHTML+=`<div class="card"><h4>${h.name}</h4><p>Specialty: ${h.specialty}</p><p>Rating: ${"★".repeat(h.rating)}</p><span class="saved-btn" onclick="saveHospital('${h.name.replace(/'/g,"\\'")}')">Save Hospital</span></div>`;
-  });
-}
-
-map=L.map("map").setView([39.5,-98.35],4);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
-
-document.getElementById("radius").addEventListener("change",function(){
-  const query=document.getElementById("locationSearch").value.trim();
-  if(query) searchByLocation();
-});
-
-updateSavedHospitalOptions();
 </script>
 </body>
 </html>
