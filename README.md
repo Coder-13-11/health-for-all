@@ -4,11 +4,9 @@ I worked on a healthcare website that reccomends you the hospitals near you and 
 //
 
 Features
-1. Nearby Hospitals Map/
-Uses location services to find hospitals near the user.
-Displays hospitals on an interactive map.
+1. Nearby Hospitals Map in Tampa Area/
 Allows filtering hospitals by specialty.
-Adjustable search radius.
+Adjustable search for hospital.
 2. Hospital List/
 Displays nearby hospitals in card format.
 Shows specialty and rating.
